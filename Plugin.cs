@@ -8,7 +8,7 @@ using BepInEx.Configuration;
 
 namespace AmbientLightFix;
 
-[BepInPlugin("Nikku.AmbientLightFix", "AmbientLightFix", "1.0.1")]
+[BepInPlugin("Nikku.AmbientLightFix", "AmbientLightFix", "1.0.2")]
 public class Plugin : BaseUnityPlugin
 {
     private static Harmony harmony;
@@ -43,26 +43,36 @@ class PatchLightingUpdate
             return;
         }
 
-        if (!WorldManager.AtmosphericScattering || !OrbitalSimulation.WorldSun)
+        // There is no sun, exit
+        if (!OrbitalSimulation.WorldSun)
         {
             return;
         }
+
         float sunYpos = OrbitalSimulation.WorldSunVector.y;
+        float sunAmount = 0f;
 
-        float sunRatio = (sunYpos + 0.2f) - OrbitalSimulation.EclipseRatio;
+        // If there is no atmosphere, sunAmount should become 0 exactly when the sun goes below the horizon
+        if (!WorldManager.AtmosphericScattering)
+        {
+            sunAmount = sunYpos - OrbitalSimulation.EclipseRatio;
+        }
+        // If there is an atmospere, we start increasing sunAmount when it is still a bit under the horizon, mimicking atmospheric scattering
+        else
+        {
+            sunAmount = (sunYpos + 0.2f) - OrbitalSimulation.EclipseRatio;
+        }
 
-        RenderSettings.ambientIntensity = Mathf.Lerp(Plugin.minAmbientLight.Value, Plugin.maxAmbientLight.Value, sunRatio);
+        RenderSettings.ambientIntensity = Mathf.Lerp(Plugin.minAmbientLight.Value, Plugin.maxAmbientLight.Value, sunAmount);
 
         //Debugging
         //counter++;
         //if(counter > 30)
         //{
         //    counter = 0;
-        //    Debug.Log($"Eclipse Ratio: {OrbitalSimulation.EclipseRatio:F2}");
+        //    //Debug.Log($"Eclipse Ratio: {OrbitalSimulation.EclipseRatio:F2}");
         //    Debug.Log($"Sun Y: {sunYpos:F1}");
         //    Debug.Log(RenderSettings.ambientIntensity);
         //}
-        //bug.Log("test");
-        //bug.Log(RenderSettings.ambientIntensity);
     }
 }
